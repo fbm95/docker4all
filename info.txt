@@ -1,0 +1,24 @@
+//jenkins container
+docker exec -u root -i -t jenkins /bin/bash
+docker exec -i -t jenkins /bin/bash
+
+docker stop jenkins
+
+docker rm $(docker ps -a -q) && docker rmi $(docker images -q)
+
+//docker build -f /vagrant/jenkins/Dockerfile -t jenkinsdocker .
+docker build -f Dockerfile -t jenkinsdocker .
+
+docker run -d --name jenkins -p 8080:8080 -p 50000:50000 -v /home/vagrant/jenkins:/var/jenkins_home jenkinsdocker
+
+
+//app container
+docker build -f /vagrant/app_container/Dockerfile -t appcontainer .
+
+docker run -d --name tomcat -p 9090:9090 -v /home/vagrant/tomcat:/usr/local/tomcat appcontainer
+
+docker run -d --name tomcat -p 9090:9090 appcontainer
+
+docker exec -u root -i -t tomcat /bin/bash
+
+//docker inspect tomcat si cautam networksettings -> ipaddress

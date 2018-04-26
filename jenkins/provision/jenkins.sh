@@ -1,0 +1,32 @@
+#! /bin/bash
+# Originally taken from: https://github.com/jenkinsci/docker/blob/weekly/jenkins.sh
+set -e
+
+# Copy files from /opt/jenkins/ref into /var/jenkins_home
+# So the initial JENKINS_HOME is set with expected content. 
+copy_reference_file() {
+	f=${1%/} 
+	echo "$f" >> $COPY_REFERENCE_FILE_LOG
+    rel=${f:17}
+    dir=$(dirname ${f})
+    echo " $f -> $rel" >> $COPY_REFERENCE_FILE_LOG
+	if [[ ! -e /var/jenkins_home/${rel} ]] 
+	then
+		echo "copy $rel to JENKINS_HOME" >> $COPY_REFERENCE_FILE_LOG
+		mkdir -p /var/jenkins_home/${dir:17}
+		cp -r /opt/jenkins/ref/${rel} /var/jenkins_home/${rel};
+		# pin plugins on initial copy
+		[[ ${rel} == plugins/*.jpi ]] && touch /var/jenkins_home/${rel}.pinned
+	fi; 
+}
+export -f copy_reference_file
+echo "--- Copying files at $(date)" >> $COPY_REFERENCE_FILE_LOG
+find /opt/jenkins/ref/ -type f -exec bash -c 'copy_reference_file {}' \;
+
+# if `docker run` first argument start with `--` the user is passing jenkins launcher arguments
+if [[ $# -lt 1 ]] || [[ "$1" == "--"* ]]; then
+   exec java $JAVA_OPTS -jar /opt/jenkins/jenkins.war $JENKINS_OPTS "$@"
+fi
+
+# As argument is not jenkins, assume user want to run his own process, for sample a `bash` shell to explore this image
+exec "$@"
